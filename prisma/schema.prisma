@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Diary {
+  id              String         @id @default(cuid())
+  title           String
+  content         String
+  contentFormat   String         @default("markdown")
+  latestVersionId String?
+  latestVersion   DiaryVersion?  @relation("LatestVersion", fields: [latestVersionId], references: [id], onDelete: SetNull)
+  versions        DiaryVersion[] @relation("DiaryVersions")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  deletedAt       DateTime?
+
+  @@index([updatedAt])
+  @@index([deletedAt])
+}
+
+model DiaryVersion {
+  id                    String         @id @default(cuid())
+  diaryId               String
+  diary                 Diary          @relation("DiaryVersions", fields: [diaryId], references: [id], onDelete: Cascade)
+  parentVersionId       String?
+  parentVersion         DiaryVersion?  @relation("VersionParent", fields: [parentVersionId], references: [id], onDelete: SetNull)
+  childVersions         DiaryVersion[] @relation("VersionParent")
+  latestForDiaries      Diary[]        @relation("LatestVersion")
+  versionNumber         Int
+  saveType              String
+  titleSnapshot         String
+  contentSnapshot       String
+  contentFormat         String
+  contentHash           String
+  message               String?
+  baseVersionId         String?
+  restoredFromVersionId String?
+  createdAt             DateTime       @default(now())
+
+  @@unique([diaryId, versionNumber])
+  @@index([diaryId, createdAt])
+  @@index([diaryId, contentHash])
+}
