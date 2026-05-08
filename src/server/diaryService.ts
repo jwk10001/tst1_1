@@ -2,19 +2,65 @@ import { NotFoundError } from "@/lib/apiErrors";
 import { prisma } from "@/lib/prisma";
 import { hashContent, normalizeDiaryContent } from "@/lib/versioning/hashContent";
 
-export async function listDiaries() {
-  return prisma.diary.findMany({
-    where: { deletedAt: null },
-    orderBy: { updatedAt: "desc" },
-    select: {
-      id: true,
-      title: true,
-      content: true,
-      latestVersionId: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
+export type DiaryListSort = "updatedAt_desc" | "createdAt_desc" | "title_asc";
+
+export type ListDiariesOptions = {
+  q?: string;
+  sort?: DiaryListSort;
+  page?: number;
+  pageSize?: number;
+};
+
+export async function listDiaries(options: ListDiariesOptions = {}) {
+  const page = options.page ?? 1;
+  const pageSize = options.pageSize ?? 10;
+  const query = options.q?.trim();
+  const where = {
+    deletedAt: null,
+    ...(query
+      ? {
+          OR: [{ title: { contains: query } }, { content: { contains: query } }],
+        }
+      : {}),
+  };
+  const orderBy = getDiaryListOrderBy(options.sort ?? "updatedAt_desc");
+  const [diaries, total] = await prisma.$transaction([
+    prisma.diary.findMany({
+      where,
+      orderBy,
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        latestVersionId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    }),
+    prisma.diary.count({ where }),
+  ]);
+
+  return {
+    diaries,
+    page,
+    pageSize,
+    total,
+    hasNextPage: page * pageSize < total,
+  };
+}
+
+function getDiaryListOrderBy(sort: DiaryListSort) {
+  if (sort === "createdAt_desc") {
+    return { createdAt: "desc" as const };
+  }
+
+  if (sort === "title_asc") {
+    return { title: "asc" as const };
+  }
+
+  return { updatedAt: "desc" as const };
 }
 
 export async function createDiary(input: { title: string; content: string }) {

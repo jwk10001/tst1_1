@@ -26,6 +26,7 @@ export function DiaryEditor({ diary }: DiaryEditorProps) {
   const [previewMode, setPreviewMode] = useState<"edit" | "preview">("edit");
   const [baseVersionId, setBaseVersionId] = useState<string | null>(diary.latestVersionId);
   const [status, setStatus] = useState<SaveStatus>("saved");
+  const [staleWarning, setStaleWarning] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const titleRef = useRef(title);
   const contentRef = useRef(content);
@@ -73,6 +74,7 @@ export function DiaryEditor({ diary }: DiaryEditorProps) {
           setBaseVersionId(data.version.id);
         }
         setLastSavedAt(new Date());
+        setStaleWarning(Boolean(data.baseVersionStale));
         if (saveType === "MANUAL") {
           setMessage("");
         }
@@ -106,6 +108,7 @@ export function DiaryEditor({ diary }: DiaryEditorProps) {
   }, []);
 
   function markDirty() {
+    setStaleWarning(false);
     setStatus("dirty");
   }
 
@@ -129,6 +132,9 @@ export function DiaryEditor({ diary }: DiaryEditorProps) {
           <AutosaveStatus status={status} lastSavedAt={lastSavedAt} />
           <span className="muted">自动保存间隔：{Math.round(autosaveIntervalMs / 1000)} 秒</span>
         </div>
+        {staleWarning ? (
+          <div className="notice">这篇日记在你开始编辑后已有新版本；本次保存已作为新的历史版本追加。</div>
+        ) : null}
         <input
           className="input"
           value={title}

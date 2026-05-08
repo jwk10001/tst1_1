@@ -82,6 +82,31 @@ describe("versionService", () => {
     expect(autoVersions[0]?.saveType).toBe("AUTO");
   });
 
+  it("reports stale base versions without blocking append-only saves", async () => {
+    const diary = await createDiary({ title: "Today", content: "one" });
+    await saveDiaryVersion({
+      diaryId: diary.id,
+      title: "Today",
+      content: "two",
+      contentFormat: "markdown",
+      saveType: "MANUAL",
+      baseVersionId: diary.latestVersionId,
+    });
+
+    const staleSave = await saveDiaryVersion({
+      diaryId: diary.id,
+      title: "Today",
+      content: "three",
+      contentFormat: "markdown",
+      saveType: "MANUAL",
+      baseVersionId: diary.latestVersionId,
+    });
+
+    expect(staleSave.changed).toBe(true);
+    expect(staleSave.baseVersionStale).toBe(true);
+    expect(staleSave.version.versionNumber).toBe(3);
+  });
+
   it("diff rejects versions from another diary", async () => {
     const first = await createDiary({ title: "First", content: "one" });
     const second = await createDiary({ title: "Second", content: "two" });
