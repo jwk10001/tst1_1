@@ -1,18 +1,7 @@
 import { createHash } from "node:crypto";
+import { normalizeDiaryContent, type HashContentInput } from "./normalizeDiaryContent";
 
-export type HashContentInput = {
-  title: string;
-  content: string;
-  contentFormat: string;
-};
-
-export function normalizeDiaryContent(input: HashContentInput): HashContentInput {
-  return {
-    title: input.title.trim() || "Untitled diary",
-    content: input.content.replace(/\r\n/g, "\n"),
-    contentFormat: input.contentFormat,
-  };
-}
+export { normalizeDiaryContent, type HashContentInput };
 
 export function hashContent(input: HashContentInput): string {
   const normalized = normalizeDiaryContent(input);

@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "Diary History",
+    "slug": "diary-history-ios",
+    "version": "0.5.0",
+    "orientation": "portrait",
+    "platforms": ["ios"],
+    "scheme": "diaryhistory",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "local.diary.history"
+    },
+    "extra": {
+      "localFirst": true
+    }
+  }
+}

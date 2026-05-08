@@ -2,10 +2,13 @@
   "name": "tst1-diary-history",
   "version": "0.5.0",
   "private": true,
+  "main": "index.ts",
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
+    "mobile:start": "expo start",
+    "mobile:ios": "expo start --ios",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -16,12 +19,18 @@
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
+    "@expo/metro-runtime": "^55.0.11",
     "@prisma/client": "^6.16.0",
     "diff": "^7.0.0",
+    "expo": "^55.0.23",
+    "expo-crypto": "^55.0.14",
+    "expo-sqlite": "^55.0.15",
     "next": "^15.5.0",
     "prisma": "^6.16.0",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-native": "0.83.6",
+    "react-native-web": "^0.21.2",
     "zod": "^4.1.0"
   },
   "devDependencies": {
