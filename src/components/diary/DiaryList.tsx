@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import Link from "next/link";
 
 type DiaryListItem = {
@@ -19,6 +19,16 @@ type DiaryListResponse = {
   hasNextPage: boolean;
 };
 
+type BackupSummary = {
+  importedDiaries: number;
+  importedVersions: number;
+  archivedDiaries: number;
+};
+
+type BackupPreview = {
+  diaries: Array<{ versions: unknown[]; deletedAt: string | null }>;
+};
+
 type DiaryListSort = "updatedAt_desc" | "createdAt_desc" | "title_asc";
 
 const pageSize = 10;
@@ -27,6 +37,8 @@ export function DiaryList() {
   const [diaries, setDiaries] = useState<DiaryListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [archivingId, setArchivingId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
@@ -35,6 +47,8 @@ export function DiaryList() {
   const [total, setTotal] = useState(0);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const loadDiaries = useCallback(async () => {
     setLoading(true);
@@ -71,6 +85,7 @@ export function DiaryList() {
   async function createDiary() {
     setCreating(true);
     setError(null);
+    setNotice(null);
 
     try {
       const response = await fetch("/api/diaries", {
@@ -91,6 +106,97 @@ export function DiaryList() {
     }
   }
 
+  async function exportBackup() {
+    setExporting(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const response = await fetch("/api/backups/export");
+      if (!response.ok) {
+        throw new Error("Export failed");
+      }
+
+      const data = (await response.json()) as { backup: unknown };
+      const backupText = JSON.stringify(data.backup, null, 2);
+      const blob = new Blob([backupText], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `diary-backup-${formatBackupTimestamp(new Date())}.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      setNotice("备份已导出。");
+    } catch {
+      setError("导出失败，请重试。");
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  function openImportPicker() {
+    setError(null);
+    setNotice(null);
+    fileInputRef.current?.click();
+  }
+
+  async function importBackupFromFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    setImporting(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const text = await file.text();
+      const backup = JSON.parse(text) as BackupPreview;
+      const diaryCount = Array.isArray(backup.diaries) ? backup.diaries.length : 0;
+      const versionCount = Array.isArray(backup.diaries)
+        ? backup.diaries.reduce((sum, diary) => sum + (Array.isArray(diary.versions) ? diary.versions.length : 0), 0)
+        : 0;
+      const archivedCount = Array.isArray(backup.diaries)
+        ? backup.diaries.filter((diary) => diary.deletedAt).length
+        : 0;
+
+      const confirmed = window.confirm(
+        `导入 ${diaryCount} 篇日记、${versionCount} 个版本？这不会覆盖现有数据，同名日记会并存。${
+          archivedCount ? `\n其中 ${archivedCount} 篇会保持归档状态。` : ""
+        }`,
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      const response = await fetch("/api/backups/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ backup }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Import failed");
+      }
+
+      const data = (await response.json()) as { summary: BackupSummary };
+      await loadDiaries();
+      setNotice(
+        `已导入 ${data.summary.importedDiaries} 篇日记、${data.summary.importedVersions} 个版本${
+          data.summary.archivedDiaries ? `，其中 ${data.summary.archivedDiaries} 篇保持归档状态` : ""
+        }。`,
+      );
+    } catch {
+      setError("导入失败，请检查备份文件后重试。");
+    } finally {
+      setImporting(false);
+    }
+  }
+
   async function archiveDiary(diary: DiaryListItem) {
     const confirmed = window.confirm(`归档“${diary.title}”？归档后会从列表隐藏，历史版本不会删除。`);
 
@@ -98,6 +204,7 @@ export function DiaryList() {
 
     setArchivingId(diary.id);
     setError(null);
+    setNotice(null);
 
     try {
       const response = await fetch(`/api/diaries/${diary.id}`, { method: "DELETE" });
@@ -126,9 +233,25 @@ export function DiaryList() {
         <div>
           <h1>日记</h1>
         </div>
-        <button className="button" disabled={creating} onClick={createDiary}>
-          {creating ? "创建中..." : "新建日记"}
-        </button>
+        <div className="row wrap-row">
+          <input
+            accept="application/json,.json"
+            aria-label="导入备份"
+            className="sr-only"
+            onChange={(event) => void importBackupFromFile(event)}
+            ref={fileInputRef}
+            type="file"
+          />
+          <button className="button secondary" disabled={exporting || importing} onClick={() => void exportBackup()} type="button">
+            {exporting ? "导出中..." : "导出备份"}
+          </button>
+          <button className="button secondary" disabled={exporting || importing} onClick={openImportPicker} type="button">
+            {importing ? "导入中..." : "导入备份"}
+          </button>
+          <button className="button" disabled={creating} onClick={createDiary}>
+            {creating ? "创建中..." : "新建日记"}
+          </button>
+        </div>
       </div>
 
       <section className="card stack">
@@ -167,6 +290,8 @@ export function DiaryList() {
         </div>
       </section>
 
+      {notice ? <section className="card notice">{notice}</section> : null}
+
       {error ? (
         <section className="card row-between">
           <span>{error}</span>
@@ -181,9 +306,7 @@ export function DiaryList() {
       {!loading && diaries.length === 0 ? (
         <section className="card stack">
           <h2>{hasSearch ? "没有匹配的日记" : "还没有日记"}</h2>
-          <p className="muted">
-            {hasSearch ? "请调整关键词。" : "创建第一篇日记。"}
-          </p>
+          <p className="muted">{hasSearch ? "请调整关键词。" : "创建第一篇日记。"}</p>
         </section>
       ) : null}
 
@@ -219,4 +342,15 @@ export function DiaryList() {
       </section>
     </main>
   );
+}
+
+function formatBackupTimestamp(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+
+  return `${year}${month}${day}-${hours}${minutes}${seconds}`;
 }

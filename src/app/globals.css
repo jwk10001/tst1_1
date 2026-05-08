@@ -29,7 +29,8 @@ a {
 
 button,
 input,
-textarea {
+textarea,
+select {
   font: inherit;
 }
 
@@ -64,6 +65,11 @@ textarea {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.wrap-row {
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .row-between {
@@ -236,6 +242,18 @@ textarea {
 .markdown-preview h4,
 .markdown-preview p {
   margin: 0 0 12px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 pre {

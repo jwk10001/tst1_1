@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+const downloadsDir = "/tmp/claude-playwright-downloads";
+
 test("creates a diary, saves with message, previews markdown, and opens history", async ({ page }) => {
   await page.goto("/diaries");
   await page.getByRole("button", { name: "新建日记" }).click();
@@ -78,6 +80,47 @@ test("opens saved-version compare from the editor shortcut", async ({ page }) =>
 
   await page.keyboard.press("Escape");
   await expect(page.getByRole("region", { name: "版本对比面板" })).not.toBeVisible();
+});
+
+test("exports a backup and imports it as a new diary copy", async ({ page }) => {
+  const suffix = Date.now().toString();
+  const title = `Backup E2E ${suffix}`;
+
+  await page.goto("/diaries");
+  await page.getByRole("button", { name: "新建日记" }).click();
+  await page.waitForURL(/\/diaries\/[^/]+$/);
+
+  await page.getByPlaceholder("标题").fill(title);
+  await page.getByPlaceholder("用 Markdown 记录今天...").fill("version one");
+  await page.getByRole("button", { name: "保存" }).click();
+  await expect(page.getByText(/已保存/)).toBeVisible();
+  await page.getByPlaceholder("用 Markdown 记录今天...").fill("version one\nversion two");
+  await page.getByRole("button", { name: "保存" }).click();
+  await expect(page.getByText(/已保存/)).toBeVisible();
+  await page.getByRole("link", { name: "列表" }).click();
+  await expect(page.getByRole("heading", { name: title })).toHaveCount(1);
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "导出备份" }).click();
+  const download = await downloadPromise;
+  const filePath = `${downloadsDir}/${download.suggestedFilename()}`;
+  await download.saveAs(filePath);
+  await expect(page.getByText("备份已导出。")).toBeVisible();
+
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByLabel("导入备份").setInputFiles(filePath);
+  await expect(page.getByText(/^已导入 \d+ 篇日记、\d+ 个版本/)).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole("heading", { name: title })).toHaveCount(2);
+
+  await page.getByRole("heading", { name: title }).nth(1).click();
+  await page.waitForURL(/\/diaries\/[^/]+$/);
+  await page.getByRole("link", { name: "历史" }).click();
+  await expect(page.getByRole("heading", { name: "历史" })).toBeVisible();
+  const historyCards = page.locator("a.card.row-between");
+  await expect(historyCards).toHaveCount(3);
+  await historyCards.first().click();
+  await expect(page.getByText("version one")).toBeVisible();
+  await expect(page.getByText("version two")).toBeVisible();
 });
 
 async function createDiary(page: import("@playwright/test").Page, title: string, content: string) {
