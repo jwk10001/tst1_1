@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { parseAutosaveInterval } from "@/lib/autosaveInterval";
+import { AutosaveStatus } from "./AutosaveStatus";
+import { MarkdownPreview } from "./MarkdownPreview";
 
 type DiaryEditorProps = {
   diary: {
@@ -14,29 +17,37 @@ type DiaryEditorProps = {
 
 type SaveStatus = "saved" | "dirty" | "saving" | "failed";
 
-const autosaveIntervalMs = Number(process.env.NEXT_PUBLIC_AUTOSAVE_INTERVAL_MS ?? 120_000);
+const autosaveIntervalMs = parseAutosaveInterval(process.env.NEXT_PUBLIC_AUTOSAVE_INTERVAL_MS);
 
 export function DiaryEditor({ diary }: DiaryEditorProps) {
   const [title, setTitle] = useState(diary.title);
   const [content, setContent] = useState(diary.content);
+  const [message, setMessage] = useState("");
+  const [previewMode, setPreviewMode] = useState<"edit" | "preview">("edit");
   const [baseVersionId, setBaseVersionId] = useState<string | null>(diary.latestVersionId);
   const [status, setStatus] = useState<SaveStatus>("saved");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const titleRef = useRef(title);
   const contentRef = useRef(content);
+  const messageRef = useRef(message);
   const baseVersionRef = useRef(baseVersionId);
   const statusRef = useRef(status);
 
   useEffect(() => {
     titleRef.current = title;
     contentRef.current = content;
+    messageRef.current = message;
     baseVersionRef.current = baseVersionId;
     statusRef.current = status;
-  }, [title, content, baseVersionId, status]);
+  }, [title, content, message, baseVersionId, status]);
 
   const save = useCallback(
     async (saveType: "MANUAL" | "AUTO") => {
       if (statusRef.current === "saving") return;
+      const submittedTitle = titleRef.current;
+      const submittedContent = contentRef.current;
+      const submittedMessage = saveType === "MANUAL" ? messageRef.current.trim() : null;
+      const submittedBaseVersionId = baseVersionRef.current;
       setStatus("saving");
 
       try {
@@ -44,11 +55,12 @@ export function DiaryEditor({ diary }: DiaryEditorProps) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            title: titleRef.current,
-            content: contentRef.current,
+            title: submittedTitle,
+            content: submittedContent,
             contentFormat: "markdown",
             saveType,
-            baseVersionId: baseVersionRef.current,
+            baseVersionId: submittedBaseVersionId,
+            message: submittedMessage || null,
           }),
         });
 
@@ -61,7 +73,10 @@ export function DiaryEditor({ diary }: DiaryEditorProps) {
           setBaseVersionId(data.version.id);
         }
         setLastSavedAt(new Date());
-        setStatus("saved");
+        if (saveType === "MANUAL") {
+          setMessage("");
+        }
+        setStatus(titleRef.current === submittedTitle && contentRef.current === submittedContent ? "saved" : "dirty");
       } catch {
         setStatus("failed");
       }
@@ -91,7 +106,7 @@ export function DiaryEditor({ diary }: DiaryEditorProps) {
   }, []);
 
   function markDirty() {
-    setStatus((current) => (current === "saving" ? current : "dirty"));
+    setStatus("dirty");
   }
 
   return (
@@ -111,7 +126,7 @@ export function DiaryEditor({ diary }: DiaryEditorProps) {
 
       <section className="card stack">
         <div className="row-between">
-          <StatusLabel status={status} lastSavedAt={lastSavedAt} />
+          <AutosaveStatus status={status} lastSavedAt={lastSavedAt} />
           <span className="muted">自动保存间隔：{Math.round(autosaveIntervalMs / 1000)} 秒</span>
         </div>
         <input
@@ -123,23 +138,45 @@ export function DiaryEditor({ diary }: DiaryEditorProps) {
           }}
           placeholder="标题"
         />
-        <textarea
-          className="textarea"
-          value={content}
-          onChange={(event) => {
-            setContent(event.target.value);
-            markDirty();
-          }}
-          placeholder="用 Markdown 记录今天..."
+        <input
+          className="input"
+          value={message}
+          onChange={(event) => setMessage(event.target.value)}
+          placeholder="手动保存说明，例如：补充今天的复盘"
+          maxLength={500}
         />
+        <div className="row">
+          <button
+            className={`button ${previewMode === "edit" ? "" : "secondary"}`}
+            type="button"
+            onClick={() => setPreviewMode("edit")}
+          >
+            编辑
+          </button>
+          <button
+            className={`button ${previewMode === "preview" ? "" : "secondary"}`}
+            type="button"
+            onClick={() => setPreviewMode("preview")}
+          >
+            Markdown 预览
+          </button>
+        </div>
+        {previewMode === "edit" ? (
+          <textarea
+            className="textarea"
+            value={content}
+            onChange={(event) => {
+              setContent(event.target.value);
+              markDirty();
+            }}
+            placeholder="用 Markdown 记录今天..."
+          />
+        ) : (
+          <div className="preview-panel">
+            <MarkdownPreview content={content} />
+          </div>
+        )}
       </section>
     </main>
   );
-}
-
-function StatusLabel({ status, lastSavedAt }: { status: SaveStatus; lastSavedAt: Date | null }) {
-  if (status === "saving") return <span className="badge">保存中</span>;
-  if (status === "dirty") return <span className="badge">有未保存改动</span>;
-  if (status === "failed") return <span className="badge">保存失败，等待重试</span>;
-  return <span className="badge">{lastSavedAt ? `已保存于 ${lastSavedAt.toLocaleTimeString()}` : "已保存"}</span>;
 }

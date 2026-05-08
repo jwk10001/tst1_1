@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { MarkdownPreview } from "@/components/diary/MarkdownPreview";
 import { RestoreButton } from "@/components/diary/RestoreButton";
 import { VersionDiffViewer } from "@/components/diary/VersionDiffViewer";
+import { AppError } from "@/lib/apiErrors";
 import { getVersion, getVersionDiff } from "@/server/versionService";
 
 type Props = {
@@ -18,7 +20,17 @@ export default async function VersionDetailPage({ params, searchParams }: Props)
     notFound();
   }
 
-  const diff = from ? await getVersionDiff(diaryId, from, versionId) : null;
+  let diff = null;
+  if (from) {
+    try {
+      diff = await getVersionDiff(diaryId, from, versionId);
+    } catch (error) {
+      if (error instanceof AppError && error.status === 404) {
+        notFound();
+      }
+      throw error;
+    }
+  }
 
   return (
     <main className="page stack">
@@ -36,7 +48,7 @@ export default async function VersionDetailPage({ params, searchParams }: Props)
           <span className="muted">{new Date(version.createdAt).toLocaleString()}</span>
         </div>
         <h2>{version.titleSnapshot}</h2>
-        <pre>{version.contentSnapshot || "空白内容"}</pre>
+        <MarkdownPreview content={version.contentSnapshot} />
       </section>
 
       {diff ? <VersionDiffViewer diff={diff} /> : null}

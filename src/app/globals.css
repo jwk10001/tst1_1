@@ -147,6 +147,60 @@ textarea {
   color: #374151;
 }
 
+.diff-empty {
+  background: #f9fafb;
+  color: #9ca3af;
+}
+
+.diff-grid {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.diff-header {
+  background: #f3f4f6;
+  color: #374151;
+  font-weight: 700;
+  padding: 10px 12px;
+}
+
+.diff-grid,
+.diff-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.diff-row {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--border);
+}
+
+.diff-row pre {
+  margin: 0;
+  min-height: 32px;
+  padding: 8px 12px;
+}
+
+.preview-panel {
+  min-height: 460px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  padding: 20px;
+}
+
+.markdown-preview {
+  line-height: 1.7;
+}
+
+.markdown-preview h2,
+.markdown-preview h3,
+.markdown-preview h4,
+.markdown-preview p {
+  margin: 0 0 12px;
+}
+
 pre {
   white-space: pre-wrap;
   word-wrap: break-word;

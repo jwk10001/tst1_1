@@ -1,3 +1,4 @@
+import { NotFoundError, ValidationAppError } from "@/lib/apiErrors";
 import { prisma } from "@/lib/prisma";
 import { diffVersions } from "@/lib/versioning/diffVersions";
 import { hashContent, normalizeDiaryContent } from "@/lib/versioning/hashContent";
@@ -24,14 +25,16 @@ export async function saveDiaryVersion(input: {
     });
 
     if (!diary) {
-      throw new Error("Diary not found");
+      throw new NotFoundError("DIARY_NOT_FOUND", "Diary not found");
     }
 
-    if (diary.latestVersion?.contentHash === contentHash) {
+    const isRestore = input.saveType === "RESTORE";
+    if (!isRestore && diary.latestVersion?.contentHash === contentHash) {
       return {
         changed: false,
         diaryId: diary.id,
         version: diary.latestVersion,
+        baseVersionStale: Boolean(input.baseVersionId && input.baseVersionId !== diary.latestVersionId),
       };
     }
 
@@ -66,13 +69,23 @@ export async function saveDiaryVersion(input: {
       changed: true,
       diaryId: diary.id,
       version,
+      baseVersionStale: Boolean(input.baseVersionId && input.baseVersionId !== diary.latestVersionId),
     };
   });
 }
 
-export async function listVersions(diaryId: string) {
+export async function listVersions(diaryId: string, filters: { saveType?: SaveType } = {}) {
+  const diary = await prisma.diary.findFirst({
+    where: { id: diaryId, deletedAt: null },
+    select: { id: true },
+  });
+
+  if (!diary) {
+    throw new NotFoundError("DIARY_NOT_FOUND", "Diary not found");
+  }
+
   return prisma.diaryVersion.findMany({
-    where: { diaryId, diary: { deletedAt: null } },
+    where: { diaryId, ...(filters.saveType ? { saveType: filters.saveType } : {}) },
     orderBy: { versionNumber: "desc" },
     select: {
       id: true,
@@ -97,13 +110,17 @@ export async function getVersion(diaryId: string, versionId: string) {
 }
 
 export async function getVersionDiff(diaryId: string, fromVersionId: string, toVersionId: string) {
+  if (!fromVersionId || !toVersionId) {
+    throw new ValidationAppError("INVALID_DIFF_RANGE", "from and to are required");
+  }
+
   const [from, to] = await Promise.all([
     getVersion(diaryId, fromVersionId),
     getVersion(diaryId, toVersionId),
   ]);
 
   if (!from || !to) {
-    throw new Error("Version not found");
+    throw new NotFoundError("VERSION_NOT_FOUND", "Version not found");
   }
 
   return {
@@ -124,7 +141,7 @@ export async function restoreVersion(input: {
   const version = await getVersion(input.diaryId, input.versionId);
 
   if (!version) {
-    throw new Error("Version not found");
+    throw new NotFoundError("VERSION_NOT_FOUND", "Version not found");
   }
 
   return saveDiaryVersion({
@@ -134,7 +151,7 @@ export async function restoreVersion(input: {
     contentFormat: "markdown",
     saveType: "RESTORE",
     baseVersionId: input.baseVersionId,
-    message: `Restored version ${version.versionNumber}`,
+    message: `Restored version #${version.versionNumber}`,
     restoredFromVersionId: version.id,
   });
 }

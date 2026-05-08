@@ -2,6 +2,16 @@
 
 本项目是一个本地优先的 Web 日记本系统。它使用 Node.js、Next.js、TypeScript、Prisma 和 SQLite 实现类似 Git 的历史记录能力。
 
+## v0.2 功能
+
+- 修复保存中继续输入时的未保存状态追踪。
+- 恢复历史版本始终创建新的 `RESTORE` 版本。
+- API 返回统一错误结构。
+- 手动保存支持填写保存说明。
+- 历史页支持按 `MANUAL`、`AUTO`、`RESTORE` 过滤。
+- 支持更清晰的 side-by-side diff。
+- 编辑页和历史详情页支持基础 Markdown 预览。
+
 ## v0.1 功能
 
 - 新建日记
@@ -32,7 +42,8 @@ npm run dev
 npm run dev          # 启动开发服务器
 npm run lint         # 代码检查
 npm run typecheck    # TypeScript 类型检查
-npm test             # 单元测试
+npm test             # 单元和集成测试
+npm run test:e2e     # Playwright E2E 测试
 npm run build        # 生产构建
 ```
 

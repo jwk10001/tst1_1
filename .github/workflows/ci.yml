@@ -16,8 +16,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: cp .env.example .env
+      - run: npx prisma migrate deploy
       - run: npx prisma generate
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e

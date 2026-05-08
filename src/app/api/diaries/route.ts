@@ -1,15 +1,24 @@
 import { NextResponse } from "next/server";
-import { createDiary, listDiaries } from "@/server/diaryService";
+import { apiErrorResponse } from "@/lib/apiErrors";
 import { createDiarySchema } from "@/lib/validation";
+import { createDiary, listDiaries } from "@/server/diaryService";
 
 export async function GET() {
-  const diaries = await listDiaries();
-  return NextResponse.json({ diaries });
+  try {
+    const diaries = await listDiaries();
+    return NextResponse.json({ diaries });
+  } catch (error) {
+    return apiErrorResponse(error);
+  }
 }
 
 export async function POST(request: Request) {
-  const body = createDiarySchema.parse(await request.json());
-  const diary = await createDiary(body);
+  try {
+    const body = createDiarySchema.parse(await request.json());
+    const diary = await createDiary(body);
 
-  return NextResponse.json({ diary }, { status: 201 });
+    return NextResponse.json({ diary }, { status: 201 });
+  } catch (error) {
+    return apiErrorResponse(error);
+  }
 }

@@ -10,30 +10,63 @@ type DiffResult = {
   contentDiff: DiffChunk[];
 };
 
+type DiffRow = {
+  type: "added" | "removed" | "unchanged";
+  left: string;
+  right: string;
+};
+
 export function VersionDiffViewer({ diff }: { diff: DiffResult }) {
   return (
     <section className="card stack">
       <h2>版本差异</h2>
       <div>
         <h3>标题</h3>
-        <DiffChunks chunks={diff.titleDiff} />
+        <SideBySideDiff chunks={diff.titleDiff} />
       </div>
       <div>
         <h3>正文</h3>
-        <DiffChunks chunks={diff.contentDiff} />
+        <SideBySideDiff chunks={diff.contentDiff} />
       </div>
     </section>
   );
 }
 
-function DiffChunks({ chunks }: { chunks: DiffChunk[] }) {
+function SideBySideDiff({ chunks }: { chunks: DiffChunk[] }) {
+  const rows = toRows(chunks);
+
+  if (rows.every((row) => row.type === "unchanged")) {
+    return <p className="muted">两个版本相同。</p>;
+  }
+
   return (
-    <pre>
-      {chunks.map((chunk, index) => (
-        <span className={`diff-${chunk.type}`} key={`${chunk.type}-${index}`}>
-          {chunk.text}
-        </span>
+    <div className="diff-grid">
+      <div className="diff-header">旧版本</div>
+      <div className="diff-header">新版本</div>
+      {rows.map((row, index) => (
+        <div className="diff-row" key={index}>
+          <pre className={row.type === "removed" ? "diff-removed" : row.type === "unchanged" ? "diff-unchanged" : "diff-empty"}>
+            {row.left}
+          </pre>
+          <pre className={row.type === "added" ? "diff-added" : row.type === "unchanged" ? "diff-unchanged" : "diff-empty"}>
+            {row.right}
+          </pre>
+        </div>
       ))}
-    </pre>
+    </div>
   );
+}
+
+function toRows(chunks: DiffChunk[]): DiffRow[] {
+  return chunks.flatMap((chunk) => {
+    const lines = chunk.text.split("\n");
+    if (lines.at(-1) === "") lines.pop();
+    const safeLines = lines.length > 0 ? lines : [""];
+
+    return safeLines.map((line) => ({
+      type: chunk.type,
+      left: chunk.type === "added" ? "" : line,
+      right: chunk.type === "removed" ? "" : line,
+    }));
+  });
 }

@@ -1,3 +1,4 @@
+import { NotFoundError } from "@/lib/apiErrors";
 import { prisma } from "@/lib/prisma";
 import { hashContent, normalizeDiaryContent } from "@/lib/versioning/hashContent";
 
@@ -62,6 +63,12 @@ export async function getDiary(diaryId: string) {
 }
 
 export async function softDeleteDiary(diaryId: string) {
+  const diary = await getDiary(diaryId);
+
+  if (!diary) {
+    throw new NotFoundError("DIARY_NOT_FOUND", "Diary not found");
+  }
+
   return prisma.diary.update({
     where: { id: diaryId },
     data: { deletedAt: new Date() },

@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
+import { parseAutosaveInterval } from "@/lib/autosaveInterval";
 import { diffVersions } from "@/lib/versioning/diffVersions";
 import { hashContent, normalizeDiaryContent } from "@/lib/versioning/hashContent";
+
+describe("autosave interval", () => {
+  it("falls back for invalid values and clamps large values", () => {
+    expect(parseAutosaveInterval("bad")).toBe(120_000);
+    expect(parseAutosaveInterval("0")).toBe(120_000);
+    expect(parseAutosaveInterval("999")).toBe(120_000);
+    expect(parseAutosaveInterval("999999999")).toBe(1_800_000);
+  });
+});
 
 describe("hashContent", () => {
   it("returns stable hashes for normalized content", () => {
