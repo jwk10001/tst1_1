@@ -16,10 +16,10 @@ type DiffRow = {
   right: string;
 };
 
-export function VersionDiffViewer({ diff }: { diff: DiffResult }) {
+export function VersionDiffViewer({ diff, compact = false }: { diff: DiffResult; compact?: boolean }) {
   return (
-    <section className="card stack">
-      <h2>版本差异</h2>
+    <section className={compact ? "stack" : "card stack"}>
+      <h2>差异</h2>
       <div>
         <h3>标题</h3>
         <SideBySideDiff chunks={diff.titleDiff} />

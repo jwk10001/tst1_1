@@ -31,13 +31,12 @@ export function VersionTimeline({
     <main className="page stack">
       <div className="header">
         <div>
-          <Link className="muted" href={`/diaries/${diaryId}`}>← 返回编辑</Link>
-          <h1>历史记录</h1>
+          <Link className="muted" href={`/diaries/${diaryId}`}>← 编辑</Link>
+          <h1>历史</h1>
         </div>
       </div>
 
       <section className="card row">
-        <span className="muted">筛选</span>
         {(["ALL", "MANUAL", "AUTO", "RESTORE"] as const).map((saveType) => (
           <Link
             className={`button ${activeSaveType === saveType ? "" : "secondary"}`}
@@ -63,7 +62,7 @@ export function VersionTimeline({
             ))}
           </select>
           <Link className={`button ${from === to ? "secondary" : ""}`} href={diffHref}>
-            {from === to ? "查看相同版本" : "查看差异"}
+            {from === to ? "相同版本" : "差异"}
           </Link>
         </section>
       ) : null}
@@ -78,7 +77,7 @@ export function VersionTimeline({
                 <span className="badge">{version.saveType}</span>
               </div>
               <h2>{version.titleSnapshot}</h2>
-              <p className="muted">{version.message ?? "无说明"}</p>
+              {version.message ? <p className="muted">{version.message}</p> : null}
             </div>
             <span className="muted">{new Date(version.createdAt).toLocaleString()}</span>
           </Link>

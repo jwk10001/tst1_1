@@ -36,7 +36,7 @@ textarea {
 .page {
   width: min(1120px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 32px 0;
+  padding: 24px 0;
 }
 
 .header {
@@ -44,20 +44,20 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 16px;
-  box-shadow: 0 10px 25px rgb(15 23 42 / 6%);
-  padding: 20px;
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgb(15 23 42 / 5%);
+  padding: 16px;
 }
 
 .stack {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .row {
@@ -79,7 +79,7 @@ textarea {
   background: var(--primary);
   color: white;
   cursor: pointer;
-  padding: 10px 14px;
+  padding: 8px 12px;
   font-weight: 700;
 }
 
@@ -146,6 +146,27 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.shortcut-hint {
+  font-size: 12px;
+}
+
+.compare-panel {
+  border-color: #bfdbfe;
+}
+
+.compare-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.version-pill {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #f9fafb;
+  padding: 11px 12px;
 }
 
 .diff-added {

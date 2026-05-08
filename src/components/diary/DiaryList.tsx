@@ -124,8 +124,7 @@ export function DiaryList() {
     <main className="page stack">
       <div className="header">
         <div>
-          <h1>日记本</h1>
-          <p className="muted">每次保存都会形成永久历史版本。</p>
+          <h1>日记</h1>
         </div>
         <button className="button" disabled={creating} onClick={createDiary}>
           {creating ? "创建中..." : "新建日记"}
@@ -183,7 +182,7 @@ export function DiaryList() {
         <section className="card stack">
           <h2>{hasSearch ? "没有匹配的日记" : "还没有日记"}</h2>
           <p className="muted">
-            {hasSearch ? "请调整搜索关键词。" : "创建第一篇日记后，手动保存和自动保存都会出现在历史记录中。"}
+            {hasSearch ? "请调整关键词。" : "创建第一篇日记。"}
           </p>
         </section>
       ) : null}
@@ -194,7 +193,7 @@ export function DiaryList() {
             <Link className="diary-card-link" href={`/diaries/${diary.id}`}>
               <div>
                 <h2>{diary.title}</h2>
-                <p className="muted">{diary.content.slice(0, 120) || "空白日记"}</p>
+                <p className="muted">{diary.content.slice(0, 80) || "空白日记"}</p>
               </div>
               <span className="muted">{new Date(diary.updatedAt).toLocaleString()}</span>
             </Link>

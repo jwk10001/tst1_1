@@ -5,6 +5,7 @@ import Link from "next/link";
 import { parseAutosaveInterval } from "@/lib/autosaveInterval";
 import { AutosaveStatus } from "./AutosaveStatus";
 import { MarkdownPreview } from "./MarkdownPreview";
+import { VersionComparePanel } from "./VersionComparePanel";
 
 type DiaryEditorProps = {
   diary: {
@@ -24,6 +25,7 @@ export function DiaryEditor({ diary }: DiaryEditorProps) {
   const [content, setContent] = useState(diary.content);
   const [message, setMessage] = useState("");
   const [previewMode, setPreviewMode] = useState<"edit" | "preview">("edit");
+  const [compareOpen, setCompareOpen] = useState(false);
   const [baseVersionId, setBaseVersionId] = useState<string | null>(diary.latestVersionId);
   const [status, setStatus] = useState<SaveStatus>("saved");
   const [staleWarning, setStaleWarning] = useState(false);
@@ -107,6 +109,22 @@ export function DiaryEditor({ diary }: DiaryEditorProps) {
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, []);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.altKey && event.key.toLowerCase() === "h") {
+        event.preventDefault();
+        setCompareOpen((current) => !current);
+      }
+
+      if (event.key === "Escape") {
+        setCompareOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   function markDirty() {
     setStaleWarning(false);
     setStatus("dirty");
@@ -116,13 +134,16 @@ export function DiaryEditor({ diary }: DiaryEditorProps) {
     <main className="page stack">
       <div className="header">
         <div>
-          <Link className="muted" href="/diaries">← 返回日记列表</Link>
-          <h1>编辑日记</h1>
+          <Link className="muted" href="/diaries">← 列表</Link>
+          <h1>编辑</h1>
         </div>
         <div className="row">
-          <Link className="button secondary" href={`/diaries/${diary.id}/history`}>历史记录</Link>
+          <button className="button secondary" onClick={() => setCompareOpen((current) => !current)} type="button">
+            对比 <span className="shortcut-hint">Alt+H</span>
+          </button>
+          <Link className="button secondary" href={`/diaries/${diary.id}/history`}>历史</Link>
           <button className="button" disabled={status === "saving"} onClick={() => void save("MANUAL")}>
-            {status === "saving" ? "保存中..." : "手动保存"}
+            {status === "saving" ? "保存中..." : "保存"}
           </button>
         </div>
       </div>
@@ -130,10 +151,10 @@ export function DiaryEditor({ diary }: DiaryEditorProps) {
       <section className="card stack">
         <div className="row-between">
           <AutosaveStatus status={status} lastSavedAt={lastSavedAt} />
-          <span className="muted">自动保存间隔：{Math.round(autosaveIntervalMs / 1000)} 秒</span>
+          <span className="muted">自动保存</span>
         </div>
         {staleWarning ? (
-          <div className="notice">这篇日记在你开始编辑后已有新版本；本次保存已作为新的历史版本追加。</div>
+          <div className="notice">检测到新版本，本次保存已追加到历史。</div>
         ) : null}
         <input
           className="input"
@@ -148,7 +169,7 @@ export function DiaryEditor({ diary }: DiaryEditorProps) {
           className="input"
           value={message}
           onChange={(event) => setMessage(event.target.value)}
-          placeholder="手动保存说明，例如：补充今天的复盘"
+          placeholder="保存说明（可选）"
           maxLength={500}
         />
         <div className="row">
@@ -164,7 +185,7 @@ export function DiaryEditor({ diary }: DiaryEditorProps) {
             type="button"
             onClick={() => setPreviewMode("preview")}
           >
-            Markdown 预览
+            预览
           </button>
         </div>
         {previewMode === "edit" ? (
@@ -183,6 +204,14 @@ export function DiaryEditor({ diary }: DiaryEditorProps) {
           </div>
         )}
       </section>
+
+      <VersionComparePanel
+        diaryId={diary.id}
+        currentVersionId={baseVersionId}
+        dirty={status === "dirty" || status === "failed"}
+        open={compareOpen}
+        onClose={() => setCompareOpen(false)}
+      />
     </main>
   );
 }

@@ -36,7 +36,7 @@ export default async function VersionDetailPage({ params, searchParams }: Props)
     <main className="page stack">
       <div className="header">
         <div>
-          <Link className="muted" href={`/diaries/${diaryId}/history`}>← 返回历史记录</Link>
+          <Link className="muted" href={`/diaries/${diaryId}/history`}>← 历史</Link>
           <h1>版本 #{version.versionNumber}</h1>
         </div>
         <RestoreButton diaryId={diaryId} version={version} />
